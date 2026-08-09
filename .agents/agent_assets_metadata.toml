@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "imTU5B7HeHWUIDSsQ6e_h"
+uri = "file://TULC-Replit-Response.docx"
+type = "word_document"
+title = "TULC – Replit Architectural Response"
+description = "Comprehensive architectural response to the TULC consultation, covering all 12 questions with a final consolidated recommendation."

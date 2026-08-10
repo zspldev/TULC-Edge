@@ -59,7 +59,7 @@ export default function CoachChatScreen() {
   const [currentMode, setCurrentMode] = useState<CoachingMode>('explain');
   const [initialized, setInitialized] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
-  const { speak, stop: stopSpeech, speakingId } = useTTS();
+  const { speak, stop: stopSpeech, speakingId, mrVoiceAvailable } = useTTS();
 
   const currentModeRef = useRef<CoachingMode>('explain');
   const messagesRef = useRef<Message[]>([]);
@@ -354,6 +354,7 @@ export default function CoachChatScreen() {
               onSpeak={(id, text, lang) => speak(id, text, lang)}
               isSpeaking={speakingId === item.id}
               onStop={stopSpeech}
+              mrVoiceAvailable={mrVoiceAvailable}
             />
           )}
           inverted={!!messages.length}

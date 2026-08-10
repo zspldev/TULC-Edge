@@ -8,6 +8,7 @@ import type { DetectedLanguage } from '@/services/aiTypes';
 
 export function useTTS() {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [mrVoiceAvailable, setMrVoiceAvailable] = useState<boolean>(false);
 
   const enVoiceRef = useRef<string | null>(null);
   const mrVoiceRef = useRef<string | null>(null);
@@ -33,6 +34,7 @@ export function useTTS() {
             v.identifier?.toLowerCase().includes('mr_in'),
         );
         mrVoiceRef.current = mr?.identifier ?? null;
+        setMrVoiceAvailable(mr != null);
       })
       .catch(() => {});
   }, []);
@@ -81,5 +83,5 @@ export function useTTS() {
     setSpeakingId(null);
   }, []);
 
-  return { speak, stop, speakingId };
+  return { speak, stop, speakingId, mrVoiceAvailable };
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import type { CoachingMode, DetectedLanguage } from '@/services/aiTypes';
@@ -23,6 +23,8 @@ interface MessageBubbleProps {
   isSpeaking?: boolean;
   /** Stop the current speech. */
   onStop?: () => void;
+  /** Whether a Marathi TTS voice is installed on this device. */
+  mrVoiceAvailable?: boolean;
 }
 
 export default function MessageBubble({
@@ -31,13 +33,23 @@ export default function MessageBubble({
   onSpeak,
   isSpeaking = false,
   onStop,
+  mrVoiceAvailable = false,
 }: MessageBubbleProps) {
   const colors = useColors();
   const isUser = message.role === 'user';
+  const isMarathi = message.responseLanguage === 'mr';
   const styles = makeStyles(colors, isUser);
 
   const handleSpeak = () => {
     if (!onSpeak) return;
+    if (isMarathi && !mrVoiceAvailable) {
+      Alert.alert(
+        'Marathi voice not installed',
+        'To hear Marathi text aloud, install a Marathi voice on your device:\n\niPhone: Settings → Accessibility → Spoken Content → Voices → Marathi\n\nAndroid: Settings → General management → Language → Text-to-speech → Install Marathi',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
     onSpeak(message.id, message.content, message.responseLanguage ?? 'en');
   };
 

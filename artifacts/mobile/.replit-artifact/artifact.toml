@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "TULC Mobile"
+description = "TULC – The Ultimate Learning Coach. A personalized, multilingual learning coach for Maharashtra SSC Standard 8 students. Teaches Science and Mathematics via a coaching loop (explain → quiz → evaluate → remediate) in English and Marathi using curriculum-grounded AI responses through OpenRouter."
+version = "1.0.0"
+id = "artifacts/mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 18115
+
+[services.development]
+run = "pnpm --filter @workspace/mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/mobile", "run", "serve" ]
+
+[services.env]
+PORT = "18115"
+BASE_PATH = "/"

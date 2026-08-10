@@ -18,3 +18,9 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+ZKE_BASE_URL = "https://zkengine.replit.app"
+ZKE_PROJECT_ID = "9"

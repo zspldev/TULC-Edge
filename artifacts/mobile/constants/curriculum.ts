@@ -163,8 +163,8 @@ export const SUBJECTS: SubjectInfo[] = [
       {
         id: 'sci-19',
         number: 19,
-        title: 'Environmental Management',
-        marathiTitle: 'पर्यावरण व्यवस्थापन',
+        title: 'Life Cycle of Stars',
+        marathiTitle: 'तार्‍यांचे जीवनचक्र',
         context: '',
       },
     ],

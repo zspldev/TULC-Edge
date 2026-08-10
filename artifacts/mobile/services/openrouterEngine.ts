@@ -2,15 +2,15 @@ import { fetch } from 'expo/fetch';
 import type { AIEngine, AIEngineRequest, AIEngineResponse } from './aiTypes';
 import { buildSystemPrompt, parseNextMode } from './coachEngine';
 import { detectLanguage } from './languageDetect';
+import { getAPIServerEngine } from './apiServerEngine';
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
 const DEFAULT_MODEL = 'google/gemini-2.0-flash-001';
 const WHISPER_MODEL = 'openai/whisper-large-v3';
 
 // ─────────────────────────────────────────────────────────────────
-// OpenRouter AI Engine — implements AIEngine interface
-// Uses google/gemini-2.0-flash-001 for multilingual coaching
-// Uses openai/whisper-large-v3 for voice transcription
+// OpenRouter AI Engine — direct API calls (requires user API key)
+// Used only when EXPO_PUBLIC_OPENROUTER_API_KEY is set.
 // ─────────────────────────────────────────────────────────────────
 
 export class OpenRouterAIEngine implements AIEngine {
@@ -35,7 +35,7 @@ export class OpenRouterAIEngine implements AIEngine {
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...request.conversationHistory.slice(-16), // Keep last 16 messages for context window
+      ...request.conversationHistory.slice(-16),
       { role: 'user', content: request.studentQuestion },
     ];
 
@@ -147,13 +147,8 @@ export class OpenRouterAIEngine implements AIEngine {
     return data.choices?.[0]?.message?.content ?? '';
   }
 
-  /**
-   * Transcribe audio using OpenRouter's Whisper endpoint.
-   * audioUri: file:// URI from expo-av recording.
-   */
   async transcribeAudio(audioUri: string): Promise<string> {
     const formData = new FormData();
-    // React Native FormData supports file:// URIs via object format
     formData.append('file', {
       uri: audioUri,
       name: 'audio.m4a',
@@ -181,13 +176,31 @@ export class OpenRouterAIEngine implements AIEngine {
   }
 }
 
-// Singleton factory — call this once and pass the engine down via context
-let engineInstance: OpenRouterAIEngine | null = null;
+// ─────────────────────────────────────────────────────────────────
+// Engine selector
+// Priority: direct OpenRouter key (with voice) → API server proxy
+// ─────────────────────────────────────────────────────────────────
 
-export function getAIEngine(): OpenRouterAIEngine {
+let engineInstance: AIEngine | null = null;
+
+export function getAIEngine(): AIEngine {
   if (!engineInstance) {
-    const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY ?? '';
-    engineInstance = new OpenRouterAIEngine(apiKey);
+    const directKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY ?? '';
+    if (directKey.length > 10) {
+      // User has their own key — use direct engine (voice transcription supported)
+      engineInstance = new OpenRouterAIEngine(directKey);
+    } else {
+      // Use the API server proxy (Replit-managed credentials, no voice)
+      engineInstance = getAPIServerEngine();
+    }
   }
   return engineInstance;
+}
+
+/**
+ * Returns true if the active engine supports voice transcription.
+ * Only the direct OpenRouter engine supports Whisper.
+ */
+export function voiceSupported(): boolean {
+  return (process.env.EXPO_PUBLIC_OPENROUTER_API_KEY ?? '').length > 10;
 }

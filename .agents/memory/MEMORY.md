@@ -1,0 +1,2 @@
+- [TULC architecture](tulc-architecture.md) — full stack decisions: monorepo, API server proxy, Gemini model, AsyncStorage, no backend DB for MVP
+- [TULC OpenRouter proxy](tulc-openrouter-proxy.md) — Replit-managed OpenRouter; model that works; voice transcription not supported through proxy

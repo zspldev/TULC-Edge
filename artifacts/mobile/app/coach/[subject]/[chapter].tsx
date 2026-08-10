@@ -24,7 +24,7 @@ import { useSession } from '@/context/SessionContext';
 import type { CoachingMode } from '@/services/aiTypes';
 import { buildCoachingInstruction } from '@/services/coachEngine';
 import { detectLanguage } from '@/services/languageDetect';
-import { getAIEngine } from '@/services/openrouterEngine';
+import { getAIEngine, voiceSupported } from '@/services/openrouterEngine';
 import { useColors } from '@/hooks/useColors';
 
 let messageCounter = 0;
@@ -334,7 +334,7 @@ export default function CoachChatScreen() {
         />
         <ChatInput
           onSend={handleSend}
-          onVoiceTranscript={handleVoiceTranscript}
+          onVoiceTranscript={voiceSupported() ? handleVoiceTranscript : undefined}
           disabled={isStreaming || !initialized}
           isTranscribing={isTranscribing}
         />

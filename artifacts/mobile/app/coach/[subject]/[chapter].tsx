@@ -27,6 +27,7 @@ import { detectLanguage } from '@/services/languageDetect';
 import { getAIEngine, voiceSupported } from '@/services/openrouterEngine';
 import { getAPIServerEngine } from '@/services/apiServerEngine';
 import { useColors } from '@/hooks/useColors';
+import { useTTS } from '@/hooks/useTTS';
 
 let messageCounter = 0;
 function makeId(): string {
@@ -58,6 +59,7 @@ export default function CoachChatScreen() {
   const [currentMode, setCurrentMode] = useState<CoachingMode>('explain');
   const [initialized, setInitialized] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const { ttsEnabled, toggleTTS, speak, stop: stopSpeech } = useTTS();
 
   const currentModeRef = useRef<CoachingMode>('explain');
   const messagesRef = useRef<Message[]>([]);
@@ -183,6 +185,9 @@ export default function CoachChatScreen() {
         setCurrentMode(nextMode);
         updateMode(nextMode);
 
+        // Speak the completed reply if TTS is on
+        speak(response.generatedText, response.responseLanguage);
+
         // Track weak concepts if remediating
         if (mode === 'remediate' || mode === 'evaluate') {
           addWeakConcept(chapter.title);
@@ -217,12 +222,13 @@ export default function CoachChatScreen() {
         setShowTyping(false);
       }
     },
-    [chapter, subject, studentName, updateMode, addWeakConcept, addConceptCovered],
+    [chapter, subject, studentName, updateMode, addWeakConcept, addConceptCovered, speak],
   );
 
   const handleSend = useCallback(
     (text: string) => {
       if (isStreaming || sessionEnded) return;
+      stopSpeech(); // stop any ongoing TTS when the student sends a new message
 
       const currentMsgs = [...messagesRef.current];
 
@@ -239,7 +245,7 @@ export default function CoachChatScreen() {
 
       sendCoachMessage(text, currentModeRef.current, newHistory);
     },
-    [isStreaming, sessionEnded, sendCoachMessage],
+    [isStreaming, sessionEnded, sendCoachMessage, stopSpeech],
   );
 
   const handleVoiceTranscript = useCallback(
@@ -315,6 +321,18 @@ export default function CoachChatScreen() {
         </View>
         <View style={styles.headerRight}>
           <CoachModeTag mode={currentMode} small />
+          <Pressable
+            onPress={toggleTTS}
+            style={({ pressed }) => [styles.endBtn, { opacity: pressed ? 0.7 : 1 }]}
+            hitSlop={8}
+            accessibilityLabel={ttsEnabled ? 'Turn off voice output' : 'Turn on voice output'}
+          >
+            <Ionicons
+              name={ttsEnabled ? 'volume-high-outline' : 'volume-mute-outline'}
+              size={22}
+              color={ttsEnabled ? colors.primary : colors.mutedForeground}
+            />
+          </Pressable>
           <Pressable
             onPress={handleEndSession}
             style={({ pressed }) => [styles.endBtn, { opacity: pressed ? 0.7 : 1 }]}

@@ -45,7 +45,7 @@ export default function MessageBubble({
     if (isMarathi && !mrVoiceAvailable) {
       Alert.alert(
         'Marathi voice not installed',
-        'To hear Marathi text aloud, install a Marathi voice on your device:\n\niPhone: Settings → Accessibility → Spoken Content → Voices → Marathi\n\nAndroid: Settings → General management → Language → Text-to-speech → Install Marathi',
+        'To hear Marathi text aloud, install a Marathi voice:\n\niPhone: Open Settings → tap the search bar at the top → type "Voices" → select Voices → Marathi → download any Marathi voice.\n\nAndroid: Settings → General management → Language → Text-to-speech → install Marathi.',
         [{ text: 'OK' }],
       );
       return;

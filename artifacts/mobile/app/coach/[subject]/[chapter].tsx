@@ -252,8 +252,20 @@ export default function CoachChatScreen() {
         if (transcript.trim()) {
           handleSend(transcript.trim());
         }
-      } catch {
-        // Transcription failed — user can type manually
+      } catch (err: any) {
+        // Show a visible error bubble so the user knows what happened
+        const errMsg: Message = {
+          id: makeId(),
+          role: 'assistant',
+          content: `Voice transcription failed: ${err?.message ?? 'unknown error'}. Please type your question.`,
+          mode: currentModeRef.current,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => {
+          const next = [...prev, errMsg];
+          messagesRef.current = next;
+          return next;
+        });
       } finally {
         setIsTranscribing(false);
       }

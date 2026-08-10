@@ -194,7 +194,9 @@ export class APIServerEngine implements AIEngine {
   async transcribeAudio(audioUri: string, langHint?: string): Promise<string> {
     const formData = new FormData();
 
-    // React Native accepts a plain object with uri/name/type as a FormData file part
+    // React Native's native FormData supports a plain object with uri/name/type
+    // as a file part — but only when using the global fetch (not expo/fetch).
+    // We reference globalThis.fetch explicitly to bypass the expo/fetch import.
     formData.append('audio', {
       uri: audioUri,
       name: 'audio.m4a',
@@ -205,10 +207,13 @@ export class APIServerEngine implements AIEngine {
       formData.append('lang', langHint);
     }
 
-    const response = await fetch(`${this.apiBase}/coach/transcribe`, {
+    // Use globalThis.fetch (RN's native fetch) — expo/fetch doesn't support
+    // the {uri, name, type} FormData object needed for file uploads.
+    const nativeFetch: typeof fetch = (globalThis as any).fetch;
+    const response = await nativeFetch(`${this.apiBase}/coach/transcribe`, {
       method: 'POST',
       body: formData,
-      // Do NOT set Content-Type manually — fetch sets it with the correct boundary
+      // Do NOT set Content-Type manually — fetch sets it with the correct multipart boundary
     });
 
     if (!response.ok) {

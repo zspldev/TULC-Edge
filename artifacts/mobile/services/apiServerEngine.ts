@@ -136,6 +136,36 @@ export class APIServerEngine implements AIEngine {
   }
 
   /**
+   * Fetch curriculum context for a chapter from ZKE RAG.
+   * Returns ZKE's synthesised answer, or null if the request fails.
+   * The coach screen falls back to the static placeholder on null.
+   */
+  async fetchCurriculumContext(
+    subject: string,
+    chapterTitle: string,
+    chapterId: string,
+  ): Promise<string | null> {
+    try {
+      const query =
+        `Key concepts, definitions, formulas, and explanations for ` +
+        `"${chapterTitle}" in ${subject} for Maharashtra SSC Standard 8`;
+
+      const response = await fetch(`${this.apiBase}/rag/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, subject, chapter: chapterId }),
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json() as { context?: string };
+      return data.context && data.context.length > 50 ? data.context : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Voice transcription is not supported through the API server proxy.
    * The mobile app should hide the mic button when using APIServerEngine.
    */

@@ -25,6 +25,7 @@ import type { CoachingMode } from '@/services/aiTypes';
 import { buildCoachingInstruction } from '@/services/coachEngine';
 import { detectLanguage } from '@/services/languageDetect';
 import { getAIEngine, voiceSupported } from '@/services/openrouterEngine';
+import { getAPIServerEngine } from '@/services/apiServerEngine';
 import { useColors } from '@/hooks/useColors';
 
 let messageCounter = 0;
@@ -61,40 +62,42 @@ export default function CoachChatScreen() {
   const currentModeRef = useRef<CoachingMode>('explain');
   const messagesRef = useRef<Message[]>([]);
   const initRef = useRef(false);
+  // Curriculum context: starts with static placeholder, upgraded to ZKE content async
+  const curriculumContextRef = useRef<string>(chapter?.context ?? '');
 
   const subjectColor = isDark ? subject?.darkColor : subject?.color;
   const studentName = profile?.name ?? 'Student';
 
-  // Start session and send first coaching message
+  // Start session, fetch ZKE context, then send first coaching message
   useEffect(() => {
     if (!subject || !chapter || initRef.current) return;
     initRef.current = true;
 
-    startSession(
-      subjectId!,
-      chapterId!,
-      subject.title,
-      chapter.title,
-      chapter.title,
-    );
+    // Seed ref with static placeholder immediately
+    curriculumContextRef.current = chapter.context;
 
-    if (!API_KEY || API_KEY.length < 10) {
-      const errMsg: Message = {
-        id: makeId(),
-        role: 'assistant',
-        content:
-          'TULC needs an OpenRouter API key to start coaching. Please ask your administrator to set the EXPO_PUBLIC_OPENROUTER_API_KEY.',
-        mode: 'explain',
-        timestamp: Date.now(),
-      };
-      setMessages([errMsg]);
-      messagesRef.current = [errMsg];
+    startSession(subjectId!, chapterId!, subject.title, chapter.title, chapter.title);
+
+    // Fire-and-forget: upgrade context from ZKE RAG before first coach message
+    const initAsync = async () => {
+      try {
+        const serverEngine = getAPIServerEngine();
+        const zkeContext = await serverEngine.fetchCurriculumContext(
+          subject.title,
+          chapter.title,
+          chapter.id,
+        );
+        if (zkeContext) {
+          curriculumContextRef.current = zkeContext;
+        }
+      } catch {
+        // ZKE unavailable — static placeholder is still in the ref, coaching continues
+      }
+      sendCoachMessage('', 'explain', []);
       setInitialized(true);
-      return;
-    }
+    };
 
-    sendCoachMessage('', 'explain', []);
-    setInitialized(true);
+    initAsync();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subject, chapter]);
 
@@ -132,7 +135,7 @@ export default function CoachChatScreen() {
           {
             studentQuestion: studentText,
             detectedLanguage: lang,
-            curriculumContext: chapter.context,
+            curriculumContext: curriculumContextRef.current,
             coachingInstruction: instruction,
             conversationHistory: chatHistory,
             studentName,

@@ -199,8 +199,9 @@ export function getAIEngine(): AIEngine {
 
 /**
  * Returns true if the active engine supports voice transcription.
- * Only the direct OpenRouter engine supports Whisper.
+ * The API server engine now proxies Whisper server-side, so voice is
+ * always supported on native (web is excluded by the ChatInput component).
  */
 export function voiceSupported(): boolean {
-  return (process.env.EXPO_PUBLIC_OPENROUTER_API_KEY ?? '').length > 10;
+  return true;
 }

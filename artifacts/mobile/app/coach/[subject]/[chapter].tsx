@@ -190,12 +190,20 @@ export default function CoachChatScreen() {
         if (mode === 'explain' || mode === 'reteach') {
           addConceptCovered(chapter.title);
         }
-      } catch (err) {
+      } catch (err: any) {
         setShowTyping(false);
+        // Surface a meaningful message rather than a generic "check internet" fallback.
+        // Rate-limit errors from OpenRouter come through as messages containing "rate-limit"
+        // or "429"; everything else is treated as a transient server error.
+        const msg = err?.message ?? '';
+        const isRateLimit = msg.includes('rate-limit') || msg.includes('rate_limit') || msg.includes('429');
+        const displayError = isRateLimit
+          ? 'The AI is temporarily busy — please wait a moment and try again.'
+          : 'Something went wrong. Please try again.';
         const errMsg: Message = {
           id: makeId(),
           role: 'assistant',
-          content: `Sorry, there was an issue connecting. Please check your internet connection and try again.`,
+          content: displayError,
           mode: currentModeRef.current,
           timestamp: Date.now(),
         };

@@ -185,11 +185,39 @@ export class APIServerEngine implements AIEngine {
   }
 
   /**
-   * Voice transcription is not supported through the API server proxy.
-   * The mobile app should hide the mic button when using APIServerEngine.
+   * Transcribe audio by uploading to the TULC API server, which calls
+   * OpenRouter Whisper server-side (no client-side API key needed).
+   *
+   * @param audioUri  Local file URI returned by expo-av after recording
+   * @param langHint  Optional BCP-47 language code hint (e.g. "mr", "en")
    */
-  async transcribeAudio(_audioUri: string): Promise<string> {
-    throw new Error('Voice transcription requires a direct OpenRouter API key. Set EXPO_PUBLIC_OPENROUTER_API_KEY to enable voice.');
+  async transcribeAudio(audioUri: string, langHint?: string): Promise<string> {
+    const formData = new FormData();
+
+    // React Native accepts a plain object with uri/name/type as a FormData file part
+    formData.append('audio', {
+      uri: audioUri,
+      name: 'audio.m4a',
+      type: 'audio/m4a',
+    } as any);
+
+    if (langHint) {
+      formData.append('lang', langHint);
+    }
+
+    const response = await fetch(`${this.apiBase}/coach/transcribe`, {
+      method: 'POST',
+      body: formData,
+      // Do NOT set Content-Type manually — fetch sets it with the correct boundary
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(errData.error ?? `Transcription failed (${response.status})`);
+    }
+
+    const data = await response.json() as { text?: string };
+    return data.text?.trim() ?? '';
   }
 }
 

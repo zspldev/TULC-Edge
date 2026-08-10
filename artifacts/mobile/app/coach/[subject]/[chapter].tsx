@@ -59,7 +59,7 @@ export default function CoachChatScreen() {
   const [currentMode, setCurrentMode] = useState<CoachingMode>('explain');
   const [initialized, setInitialized] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
-  const { ttsEnabled, toggleTTS, speak, stop: stopSpeech } = useTTS();
+  const { speak, stop: stopSpeech, speakingId } = useTTS();
 
   const currentModeRef = useRef<CoachingMode>('explain');
   const messagesRef = useRef<Message[]>([]);
@@ -185,8 +185,17 @@ export default function CoachChatScreen() {
         setCurrentMode(nextMode);
         updateMode(nextMode);
 
-        // Speak the completed reply if TTS is on
-        speak(response.generatedText, response.responseLanguage);
+        // Stamp the final message with its response language so the Speak button
+        // knows which voice to use when the user taps it.
+        setMessages((prev) => {
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          if (updated[lastIdx]?.id === msgId) {
+            updated[lastIdx] = { ...updated[lastIdx], responseLanguage: response.responseLanguage };
+          }
+          messagesRef.current = updated;
+          return updated;
+        });
 
         // Track weak concepts if remediating
         if (mode === 'remediate' || mode === 'evaluate') {
@@ -222,13 +231,12 @@ export default function CoachChatScreen() {
         setShowTyping(false);
       }
     },
-    [chapter, subject, studentName, updateMode, addWeakConcept, addConceptCovered, speak],
+    [chapter, subject, studentName, updateMode, addWeakConcept, addConceptCovered],
   );
 
   const handleSend = useCallback(
     (text: string) => {
       if (isStreaming || sessionEnded) return;
-      stopSpeech(); // stop any ongoing TTS when the student sends a new message
 
       const currentMsgs = [...messagesRef.current];
 
@@ -245,7 +253,7 @@ export default function CoachChatScreen() {
 
       sendCoachMessage(text, currentModeRef.current, newHistory);
     },
-    [isStreaming, sessionEnded, sendCoachMessage, stopSpeech],
+    [isStreaming, sessionEnded, sendCoachMessage],
   );
 
   const handleVoiceTranscript = useCallback(
@@ -322,18 +330,6 @@ export default function CoachChatScreen() {
         <View style={styles.headerRight}>
           <CoachModeTag mode={currentMode} small />
           <Pressable
-            onPress={toggleTTS}
-            style={({ pressed }) => [styles.endBtn, { opacity: pressed ? 0.7 : 1 }]}
-            hitSlop={8}
-            accessibilityLabel={ttsEnabled ? 'Turn off voice output' : 'Turn on voice output'}
-          >
-            <Ionicons
-              name={ttsEnabled ? 'volume-high-outline' : 'volume-mute-outline'}
-              size={22}
-              color={ttsEnabled ? colors.primary : colors.mutedForeground}
-            />
-          </Pressable>
-          <Pressable
             onPress={handleEndSession}
             style={({ pressed }) => [styles.endBtn, { opacity: pressed ? 0.7 : 1 }]}
             hitSlop={8}
@@ -352,7 +348,13 @@ export default function CoachChatScreen() {
           data={reversedMessages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <MessageBubble message={item} studentName={studentName} />
+            <MessageBubble
+              message={item}
+              studentName={studentName}
+              onSpeak={(id, text, lang) => speak(id, text, lang)}
+              isSpeaking={speakingId === item.id}
+              onStop={stopSpeech}
+            />
           )}
           inverted={!!messages.length}
           ListHeaderComponent={showTyping ? <TypingIndicator /> : null}

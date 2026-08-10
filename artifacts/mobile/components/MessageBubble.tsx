@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import type { CoachingMode } from '@/services/aiTypes';
+import type { CoachingMode, DetectedLanguage } from '@/services/aiTypes';
 import CoachModeTag from './CoachModeTag';
 
 export interface Message {
@@ -10,18 +11,35 @@ export interface Message {
   content: string;
   mode?: CoachingMode;
   timestamp: number;
+  responseLanguage?: DetectedLanguage;
 }
 
 interface MessageBubbleProps {
   message: Message;
   studentName: string;
+  /** Called when the user taps Speak. Parent passes message id so useTTS can track which is active. */
+  onSpeak?: (id: string, text: string, lang: DetectedLanguage) => void;
+  /** True while this specific message is being read aloud. */
+  isSpeaking?: boolean;
+  /** Stop the current speech. */
+  onStop?: () => void;
 }
 
-export default function MessageBubble({ message, studentName }: MessageBubbleProps) {
+export default function MessageBubble({
+  message,
+  studentName,
+  onSpeak,
+  isSpeaking = false,
+  onStop,
+}: MessageBubbleProps) {
   const colors = useColors();
   const isUser = message.role === 'user';
-
   const styles = makeStyles(colors, isUser);
+
+  const handleSpeak = () => {
+    if (!onSpeak) return;
+    onSpeak(message.id, message.content, message.responseLanguage ?? 'en');
+  };
 
   return (
     <View style={styles.wrapper}>
@@ -45,6 +63,44 @@ export default function MessageBubble({ message, studentName }: MessageBubblePro
           </View>
         )}
       </View>
+
+      {/* Voice controls — only for assistant messages with content */}
+      {!isUser && onSpeak && message.content.length > 0 && (
+        <View style={styles.voiceRow}>
+          {isSpeaking ? (
+            /* ── Active: show animated indicator + Stop button ── */
+            <>
+              <View style={styles.speakingPill}>
+                <Ionicons name="volume-high" size={14} color={colors.primary} />
+                <Text style={[styles.speakingLabel, { color: colors.primary }]}>Speaking…</Text>
+              </View>
+              <Pressable
+                onPress={onStop}
+                style={({ pressed }) => [
+                  styles.stopBtn,
+                  { borderColor: colors.destructive, opacity: pressed ? 0.7 : 1 },
+                ]}
+                hitSlop={8}
+                accessibilityLabel="Stop reading"
+              >
+                <Ionicons name="stop" size={12} color={colors.destructive} />
+                <Text style={[styles.stopLabel, { color: colors.destructive }]}>Stop</Text>
+              </Pressable>
+            </>
+          ) : (
+            /* ── Idle: show Speak button ── */
+            <Pressable
+              onPress={handleSpeak}
+              style={({ pressed }) => [styles.speakBtn, { opacity: pressed ? 0.6 : 1 }]}
+              hitSlop={8}
+              accessibilityLabel="Read this message aloud"
+            >
+              <Ionicons name="volume-medium-outline" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.speakLabel, { color: colors.mutedForeground }]}>Speak</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -104,5 +160,43 @@ const makeStyles = (colors: ReturnType<typeof useColors>, isUser: boolean) =>
       fontFamily: 'Inter_400Regular',
       fontSize: 15,
       lineHeight: 22,
+    },
+    voiceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginLeft: 40,
+      marginTop: 4,
+      gap: 8,
+    },
+    speakBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    speakLabel: {
+      fontFamily: 'Inter_400Regular',
+      fontSize: 12,
+    },
+    speakingPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    speakingLabel: {
+      fontFamily: 'Inter_500Medium',
+      fontSize: 12,
+    },
+    stopBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      borderWidth: 1,
+      borderRadius: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    stopLabel: {
+      fontFamily: 'Inter_500Medium',
+      fontSize: 12,
     },
   });

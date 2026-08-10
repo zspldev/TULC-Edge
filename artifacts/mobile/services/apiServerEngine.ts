@@ -136,9 +136,14 @@ export class APIServerEngine implements AIEngine {
   }
 
   /**
-   * Fetch curriculum context for a chapter from ZKE RAG.
-   * Returns ZKE's synthesised answer, or null if the request fails.
-   * The coach screen falls back to the static placeholder on null.
+   * Fetch curriculum context for a chapter from ZKE RAG (retrieve mode).
+   *
+   * Returns concatenated chunk text for use in the coaching prompt, or null
+   * if ZKE has no results or the request fails — the coach screen then tells
+   * the student the material is not yet loaded (per anti-hallucination rules).
+   *
+   * Query is written as a natural sentence (ZKE guide Section 6.2).
+   * top_k 15 is the guide recommendation for concept-explanation queries (Section 6.3).
    */
   async fetchCurriculumContext(
     subject: string,
@@ -146,19 +151,33 @@ export class APIServerEngine implements AIEngine {
     chapterId: string,
   ): Promise<string | null> {
     try {
+      // Natural sentence query — ZKE guide explicitly warns against keyword lists (Section 6.2)
       const query =
-        `Key concepts, definitions, formulas, and explanations for ` +
-        `"${chapterTitle}" in ${subject} for Maharashtra SSC Standard 8`;
+        `What are all the concepts, definitions, formulas, and explanations ` +
+        `covered in the chapter "${chapterTitle}" for Maharashtra SSC Standard 8 ${subject}?`;
 
       const response = await fetch(`${this.apiBase}/rag/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, subject, chapter: chapterId }),
+        body: JSON.stringify({
+          query,
+          subject,
+          chapter: chapterId,
+          top_k: 15, // Concept-explanation type (ZKE guide Section 6.3)
+        }),
       });
 
       if (!response.ok) return null;
 
-      const data = await response.json() as { context?: string };
+      const data = await response.json() as {
+        context?: string;
+        noResults?: boolean;
+        source?: string;
+      };
+
+      // no_results means the topic isn't indexed yet — don't fabricate (guide Section 6.5)
+      if (data.noResults) return null;
+
       return data.context && data.context.length > 50 ? data.context : null;
     } catch {
       return null;

@@ -1,9 +1,9 @@
 ---
 name: TULC OpenRouter proxy
-description: OpenRouter model availability and constraints through Replit AI Integrations proxy
+description: OpenRouter model availability and constraints through Replit AI Integrations proxy; also ZKE RAG auth notes
 ---
 
-## Working model (as of August 2026)
+## Working OpenRouter model (as of August 2026)
 
 `google/gemini-2.5-flash` — confirmed working through `AI_INTEGRATIONS_OPENROUTER_BASE_URL`.
 
@@ -35,3 +35,7 @@ curl -s -X POST "${AI_INTEGRATIONS_OPENROUTER_BASE_URL}/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{"model":"MODEL_ID","messages":[{"role":"user","content":"Hi"}],"max_tokens":5}'
 ```
+
+## ZKE RAG auth — guide vs reality
+
+The ZKE User Guide (August 2026) specifies `Authorization: Bearer YOUR_API_KEY` but the live deployed API rejects this with an error. The actual working header is `x-api-key: YOUR_API_KEY`. Keep using `x-api-key` until ZKE confirms the header change is live.

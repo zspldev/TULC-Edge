@@ -61,8 +61,11 @@ export async function stopRecording(): Promise<string | null> {
     const uri = currentRecording.getURI();
     currentRecording = null;
 
+    // Restore full playback mode — omitting playsInSilentModeIOS would
+    // reset it to false (iOS default), silencing any subsequent TTS audio.
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
     });
 
     return uri ?? null;

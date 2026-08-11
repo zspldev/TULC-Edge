@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { getAPIServerEngine } from '@/services/apiServerEngine';
 import type { DetectedLanguage } from '@/services/aiTypes';
 
@@ -45,7 +45,14 @@ export function useTTS() {
       });
       if (stopFlagRef.current) return;
 
-      // 3. Unload any previous sound and load the new one.
+      // 3. Re-assert playback audio mode — recording resets playsInSilentModeIOS
+      //    to false, which silences TTS on iOS if the phone is not on silent.
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
+      // 4. Unload any previous sound and load the new one.
       if (soundRef.current) {
         await soundRef.current.unloadAsync().catch(() => {});
         soundRef.current = null;

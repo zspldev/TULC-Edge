@@ -185,11 +185,32 @@ export class APIServerEngine implements AIEngine {
   }
 
   /**
+   * Synthesise speech via Sarvam Bulbul v3 on the API server.
+   * Returns a base64-encoded WAV string ready to write to a temp file.
+   *
+   * @param text      Text to speak (truncated to 2500 chars server-side)
+   * @param language  "en" | "mr"
+   */
+  async synthesizeSpeech(text: string, language: string): Promise<string> {
+    const response = await fetch(`${this.apiBase}/tts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, language }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(err.error ?? `TTS failed (${response.status})`);
+    }
+    const data = await response.json() as { audio?: string };
+    return data.audio ?? '';
+  }
+
+  /**
    * Transcribe audio by uploading to the TULC API server, which calls
-   * OpenRouter Whisper server-side (no client-side API key needed).
+   * Sarvam Saaras v3 — optimised for Marathi and Indian English.
    *
    * @param audioUri  Local file URI returned by expo-av after recording
-   * @param langHint  Optional BCP-47 language code hint (e.g. "mr", "en")
+   * @param langHint  Optional language hint (e.g. "mr", "en")
    */
   async transcribeAudio(audioUri: string, langHint?: string): Promise<string> {
     const formData = new FormData();

@@ -191,7 +191,14 @@ export class APIServerEngine implements AIEngine {
    * @param text      Text to speak (truncated to 2500 chars server-side)
    * @param language  "en" | "mr"
    */
-  async synthesizeSpeech(text: string, language: string): Promise<string> {
+  /**
+   * Synthesise speech via Sarvam Bulbul v3 on the API server.
+   * Long text is chunked server-side; returns one base64 WAV per chunk.
+   *
+   * @param text      Text to speak
+   * @param language  "en" | "mr"
+   */
+  async synthesizeSpeech(text: string, language: string): Promise<string[]> {
     const response = await fetch(`${this.apiBase}/tts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -201,8 +208,8 @@ export class APIServerEngine implements AIEngine {
       const err = await response.json().catch(() => ({})) as { error?: string };
       throw new Error(err.error ?? `TTS failed (${response.status})`);
     }
-    const data = await response.json() as { audio?: string };
-    return data.audio ?? '';
+    const data = await response.json() as { audios?: string[] };
+    return data.audios ?? [];
   }
 
   /**

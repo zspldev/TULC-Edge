@@ -25,11 +25,11 @@ export function useTTS() {
   // ── Cleanup helpers ──────────────────────────────────────────────
 
   const unloadSound = useCallback(async () => {
-    if (soundRef.current) {
-      await soundRef.current.stopAsync().catch(() => {});
-      await soundRef.current.unloadAsync().catch(() => {});
-      soundRef.current = null;
-    }
+    const sound = soundRef.current;
+    if (!sound) return;
+    soundRef.current = null; // null immediately so concurrent callers don't get the same ref
+    await sound.stopAsync().catch(() => {});
+    await sound.unloadAsync().catch(() => {});
   }, []);
 
   const deleteTmpFiles = useCallback(() => {

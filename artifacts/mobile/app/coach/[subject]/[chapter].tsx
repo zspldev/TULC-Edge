@@ -59,7 +59,7 @@ export default function CoachChatScreen() {
   const [currentMode, setCurrentMode] = useState<CoachingMode>('explain');
   const [initialized, setInitialized] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
-  const { speak, stop: stopSpeech, speakingId } = useTTS();
+  const { speak, stop: stopSpeech, speakingId, prefetchMessageTTS, prefetchStreamingSentences } = useTTS();
 
   const currentModeRef = useRef<CoachingMode>('explain');
   const messagesRef = useRef<Message[]>([]);
@@ -149,6 +149,10 @@ export default function CoachChatScreen() {
             // Strip [NEXT_MODE:xxx] from displayed text in real-time
             const displayText = fullContent.replace(/\[NEXT_MODE:\w+\]/gi, '').trim();
 
+            // Pre-fetch TTS for sentences that are already complete while the
+            // LLM is still streaming — so audio is ready before the user taps Speak.
+            prefetchStreamingSentences(msgId, displayText, lang);
+
             setShowTyping(false);
 
             if (!assistantAdded) {
@@ -178,6 +182,11 @@ export default function CoachChatScreen() {
             }
           },
         );
+
+        // Streaming done — kick off sequential prefetch for any sentences not yet cached.
+        // By the time the user taps Speak, each sentence's audio will be ready.
+        const finalDisplayText = fullContent.replace(/\[NEXT_MODE:\w+\]/gi, '').trim();
+        prefetchMessageTTS(msgId, finalDisplayText, response.responseLanguage ?? lang);
 
         // Apply next mode from LLM response
         const nextMode = response.nextMode;
@@ -231,7 +240,7 @@ export default function CoachChatScreen() {
         setShowTyping(false);
       }
     },
-    [chapter, subject, studentName, updateMode, addWeakConcept, addConceptCovered],
+    [chapter, subject, studentName, updateMode, addWeakConcept, addConceptCovered, prefetchMessageTTS, prefetchStreamingSentences],
   );
 
   const handleSend = useCallback(
